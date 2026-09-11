@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Operativo - Documentación de Vías TMC</title>
+    <style>
+        :root {
+            --primary: #004d40;
+            --secondary: #00796b;
+            --accent: #ffb300;
+            --bg-light: #f4f7f6;
+            --text-dark: #263238;
+            --text-light: #eceff1;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: var(--primary);
+            color: var(--text-light);
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #b2dfdb;
+            margin-top: 4px;
+        }
+
+        main {
+            display: flex;
+            flex: 1;
+            padding: 2rem;
+            gap: 2rem;
+        }
+
+        .map-container {
+            flex: 2;
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .sidebar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--secondary);
+        }
+
+        .info-card h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            color: var(--primary);
+            border-bottom: 2px solid var(--bg-light);
+            padding-bottom: 0.5rem;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.8rem;
+            font-size: 0.95rem;
+        }
+
+        .data-label {
+            font-weight: 600;
+            color: #546e7a;
+        }
+
+        .data-value {
+            color: var(--text-dark);
+            font-family: monospace;
+            background: #eceff1;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* SVG Map Styles */
+        svg {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            overflow: visible;
+        }
+
+        .track {
+            fill: none;
+            stroke-width: 18;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .track-bg {
+            fill: none;
+            stroke: #cfd8dc;
+            stroke-width: 24;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* Colores por vía */
+        .track-305 { stroke: #1976d2; }
+        .track-307 { stroke: #388e3c; }
+        .track-302 { stroke: #fbc02d; }
+        .track-301 { stroke: #d32f2f; }
+        .track-306 { stroke: #7b1fa2; }
+        .track-101 { stroke: #00897b; }
+        .track-200-220 { stroke: #5e35b1; }
+        .track-709 { stroke: #ef6c00; }
+        .track-ic-709 { stroke: #6d4c41; }
+        .track-100 { stroke: #546e41; }
+        .track-701 { stroke: #c2185b; }
+        .track-705 { stroke: #455a64; }
+
+        .track:hover {
+            filter: brightness(1.2);
+            stroke-width: 22;
+        }
+
+        .node {
+            fill: white;
+            stroke: var(--text-dark);
+            stroke-width: 3;
+            pointer-events: none;
+        }
+
+        .node-label {
+            font-family: monospace;
+            font-size: 12px;
+            fill: #546e7a;
+            pointer-events: none;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(38, 50, 56, 0.95);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 100;
+            min-width: 200px;
+        }
+
+        .tooltip-title {
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 4px;
+            font-size: 1.1rem;
+        }
+
+        .tooltip-data {
+            margin: 4px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .instructions {
+            background: #e3f2fd;
+            border-left: 5px solid #1976d2;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #0d47a1;
+            margin-bottom: 1rem;
+        }
+
+        .btn-link {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 8px 16px;
+            background-color: var(--secondary);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-align: center;
+            transition: background 0.2s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .btn-link:hover {
+            background-color: var(--primary);
+        }
+
+        .route-board {
+            width: 100%;
+            max-width: 980px;
+            background: #102a2a;
+            color: #f6fbf8;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-sizing: border-box;
+            box-shadow: 0 16px 35px rgba(0, 77, 64, 0.18);
+        }
+
+        .board-toolbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255,255,255,0.16);
+            padding-bottom: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .board-kicker {
+            color: #8ed1b8;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+        }
+
+        .board-toolbar h2 {
+            margin: 0.35rem 0 0;
+            font-size: clamp(1.4rem, 3vw, 2rem);
+            font-weight: 600;
+        }
+
+        .board-toolbar p {
+            color: #b8ceca;
+            margin: 0.45rem 0 0;
+            font-size: 0.85rem;
+        }
+
+        .board-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(90px, 1fr));
+            gap: 0.5rem;
+            min-width: 190px;
+        }
+
+        .board-metric {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 0.6rem;
+        }
+
+        .board-metric strong { display: block; font-size: 1.1rem; }
+        .board-metric span { color: #9bb9b4; font-size: 0.68rem; text-transform: uppercase; }
+
+        .route-list { display: grid; gap: 0.4rem; }
+
+        .route-track {
+            display: grid;
+            grid-template-columns: 76px minmax(150px, 1fr) 170px 92px;
+            align-items: center;
+            gap: 0.9rem;
+            width: 100%;
+            min-height: 58px;
+            padding: 0.65rem 0.75rem;
+            border: 0;
+            border-left: 4px solid currentColor;
+            border-radius: 8px;
+            color: #f6fbf8;
+            background: rgba(255,255,255,0.055);
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .route-track:hover { background: rgba(255,255,255,0.13); transform: translateX(4px); }
+        .route-name { font-size: 1rem; font-weight: 700; }
+        .route-kind { color: #9bb9b4; font-size: 0.7rem; display: block; margin-top: 0.2rem; }
+        .route-pk { color: #d1e2dd; font-family: monospace; font-size: 0.76rem; white-space: nowrap; }
+        .route-pk span { color: #82b7aa; margin: 0 0.25rem; }
+        .route-meter { height: 8px; background: rgba(255,255,255,0.11); border-radius: 99px; overflow: hidden; }
+        .route-fill { height: 100%; border-radius: inherit; background: currentColor; }
+        .route-length { font-family: monospace; font-size: 0.82rem; text-align: right; white-space: nowrap; }
+
+        @media (max-width: 900px) {
+            main { flex-direction: column; padding: 1rem; }
+            .route-track { grid-template-columns: 64px 1fr 92px; }
+            .route-pk { grid-column: 2 / 4; grid-row: 2; }
+            .route-meter { grid-column: 2; grid-row: 1; }
+            .route-length { grid-column: 3; grid-row: 1; }
+        }
+
+        @media (max-width: 560px) {
+            .map-container { padding: 0.75rem; }
+            .board-toolbar { flex-direction: column; }
+            .board-metrics { width: 100%; }
+            .route-track { grid-template-columns: 56px 1fr 86px; gap: 0.5rem; padding: 0.55rem; }
+            .route-name { font-size: 0.9rem; }
+            .route-length { font-size: 0.7rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>
+            <h1>Dashboard Operativo</h1>
+            <div class="subtitle">Documentación Estructural y Cadenamientos - Proyecto TMC</div>
+        </div>
+        <div style="text-align: right;">
+            <img src="LogoJCR.png" alt="Logo JCR" style="height: 40px; margin-bottom: 4px;">
+            <div style="font-weight: 600; font-size: 0.9rem;">EXPERTOS EN VÍAS</div>
+            <div style="font-size: 0.8rem; color: #b2dfdb;">Módulo de Acceso Documental</div>
+        </div>
+    </header>
+
+    <main>
+        <div class="map-container">
+            
+            
+            <section class="route-board" aria-labelledby="board-title">
+                <div class="board-toolbar">
+                    <div>
+                        <div class="board-kicker">REGISTRO OPERATIVO · TMC</div>
+                        <h2 id="board-title">Vías 2026</h2>
+                        <p>Comparativa de longitud y cadenamientos por vía</p>
+                    </div>
+                    <div class="board-metrics" id="board-metrics"></div>
+                </div>
+                <div class="route-list" id="route-list"></div>
+            </section>
+
+            <!-- Custom Tooltip Div -->
+            <div id="tooltip" class="tooltip"></div>
+        </div>
+
+        <div class="sidebar">
+            <div class="info-card" id="detail-card">
+                <h2>Detalle de Vía Seleccionada</h2>
+                <div style="color: #78909c; font-size: 0.9rem; margin-bottom: 1rem;">
+                    Selecciona una banda del atlas para visualizar sus cadenamientos o gestionar los documentos.
+                </div>
+                <div class="data-row">
+                    <span class="data-label">Vía:</span>
+                    <span class="data-value" id="info-via">---</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">PK Inicio:</span>
+                    <span class="data-value" id="info-start">---</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">PK Término:</span>
+                    <span class="data-value" id="info-end">---</span>
+                </div>
+                <a href="#" id="info-link" class="btn-link" target="_blank" style="display: none;">
+                    Abrir Carpeta OneDrive
+                </a>
+            </div>
+
+            <div class="info-card">
+                <h2>Resumen Estructural</h2>
+                <div class="data-row">
+                    <span class="data-label">Total Vías Mapeadas:</span>
+                    <span class="data-value">12</span>
+                </div>
+                <div class="data-row">
+                    <span class="data-label">Longitud Total (Aprox):</span>
+                    <span class="data-value">18,764.255 m</span>
+                </div>
+                
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const routes = [
+            { via: '301', length: 2685, start: '2+474.599', end: '5+159.962', color: '#d32f2f', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgDrOTqAYI1IS5g2q-vRaD5KAR5h4kpZ9x-fvTCepEC-jLw?e=88s3Cp' },
+            { via: '302', length: 276, start: '2+197.726', end: '2+474.599', color: '#fbc02d', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgC79k3JZpGXTJeKQyHwKg2PAdu_tbIs6qC2XaoQyJElvWs?e=A7IWRK' },
+            { via: '305', length: 1651, start: '0+000.000', end: '1+651.061', color: '#1976d2', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgCsIEXqNhNgTqndIrG66941AWUTY9thWc-Frq6mphNJZ3U?e=IHJS15' },
+            { via: '306', length: 1374, start: '5+159.962', end: '6+534.601', color: '#7b1fa2', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgC1uOIzh2dJSY6YwkBQwVJqAc1TzmKzV5mf1wX2vAV26CA?e=nrWA09' },
+            { via: '307', length: 546, start: '1+651.061', end: '2+197.726', color: '#388e3c', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgCPzkqLdiwvQpqa_Ver_69JAVbgj4nk6EDKNdkkcUDT-mE?e=FJPOL0' },
+            { via: '101', length: 2657, start: '2+474.599', end: '5+132.000', color: '#00897b', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgAXDXrgsMBKSIJ2a2pmgYC7ARON6J_ExsdkyIJcAC4OwDM?e=FCpWzM' },
+            { via: '200/220', length: 2161, start: '2+574.701', end: '4+736.060', color: '#5e35b1', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgBt1TOxMRFARIWVrlHzz6J5AZyuRqHXvtW0Oydt60Myvjc?e=PMfDXy' },
+            { via: '709', length: 1430, start: '1+651.061', end: '3+081.490', color: '#ef6c00', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgAnYqwGEIXTQa6kFRlIpMQXAYZ_xIjF3wTmKeKXrlT5Axk?e=g0OIlG' },
+            { via: 'IC 709', length: 1028, start: '3+081.490', end: '4+110.194', color: '#6d4c41', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgB443HpJCWNTLHbgvN-LizZAXGAZtJmoDxV5OB2sVIGsC8?e=wKWcaP' },
+            { via: '100', length: 1825, start: '2+624.750', end: '4+684.440', color: '#546e41', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgAvdwkxiGggTJaFFyRs8uHvASch4ajSPJU00ALXmHoKFAk?e=Ro7R73' },
+            { via: '701', length: 1700.717, start: '2+979.583', end: '4+680.300', color: '#c2185b', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgAL5A3xYhsNSL1PS6nqxaPqAYThnWaS8Do2JOQBYDUAnnU?e=r9PpHN' },
+            { via: '705', length: 1430.538, start: '2+979.580', end: '4+410.118', color: '#455a64', link: 'https://1drv.ms/f/c/4492032b9c6acf8d/IgAafvYDr5t1TI88hhAKI7VUAUc-QMYpEyRNPCYw0ShHEEE?e=KcDfZx' }
+        ];
+
+        const routeList = document.getElementById('route-list');
+        const maxLength = Math.max(...routes.map(route => route.length));
+        const totalLength = routes.reduce((total, route) => total + route.length, 0);
+        const formatLength = length => `${length.toLocaleString('es-MX', { maximumFractionDigits: 3 })} m`;
+
+        document.getElementById('board-metrics').innerHTML = `
+            <div class="board-metric"><strong>${routes.length}</strong><span>vías construidas</span></div>
+            <div class="board-metric"><strong>${(totalLength / 1000).toFixed(2)} km</strong><span>longitud total</span></div>
+        `;
+
+        routeList.innerHTML = routes.map(route => `
+            <button class="route-track track" type="button" style="color: ${route.color}" data-via="${route.via}" data-length="${route.length}" data-pk-start="${route.start}" data-pk-end="${route.end}" data-link="${route.link || ''}">
+                <span class="route-name">${route.via}<span class="route-kind">VÍA PROGRAMADA</span></span>
+                <span class="route-meter"><span class="route-fill" style="width: ${(route.length / maxLength) * 100}%"></span></span>
+                <span class="route-pk">${route.start}<span>→</span>${route.end}</span>
+                <span class="route-length">${formatLength(route.length)}</span>
+            </button>
+        `).join('');
+
+        const infoVia = document.getElementById('info-via');
+        const infoStart = document.getElementById('info-start');
+        const infoEnd = document.getElementById('info-end');
+        const infoLink = document.getElementById('info-link');
+
+        document.querySelectorAll('.route-track').forEach(track => {
+            const showDetails = () => {
+                const link = track.getAttribute('data-link');
+                infoVia.textContent = `Vía ${track.getAttribute('data-via')}`;
+                infoStart.textContent = track.getAttribute('data-pk-start');
+                infoEnd.textContent = track.getAttribute('data-pk-end');
+                infoLink.style.display = link ? 'block' : 'none';
+                infoLink.href = link || '#';
+            };
+
+            track.addEventListener('mouseenter', showDetails);
+            track.addEventListener('focus', showDetails);
+            track.addEventListener('click', () => {
+                const link = track.getAttribute('data-link');
+                if (link) window.open(link, '_blank');
+            });
+        });
+    </script>
+</body>
+</html>
